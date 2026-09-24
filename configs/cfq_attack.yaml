@@ -1,0 +1,5 @@
+method: CFQ-Attack
+stages:
+  - complementary_feedback_attack_construction
+  - attack_preserving_quality_optimization
+
