@@ -1,97 +1,87 @@
 # CFQ-Attack
 
-Anonymous review-time code for **CFQ-Attack: Transferable Object Detection
-Attacks via Attack-Preserving Latent Optimization**.
+PyTorch reference framework for **CFQ-Attack: Transferable Diffusion-Based
+Unrestricted Attacks on Object Detectors via Attack-Preserving Quality
+Optimization**.
 
-CFQ-Attack follows one continuous diffusion latent trajectory with two stages:
+## Overview
 
-1. **Complementary-feedback attack-state construction** combines
-   output-frequency, object-aware geometry, and multi-level feature feedback.
-2. **Attack-preserving quality optimization** improves perceptual and
-   structural quality while retaining the attack state established in Stage A.
+CFQ-Attack is a diffusion-based unrestricted adversarial attack for object
+detectors. It aims to improve black-box transferability while maintaining the
+perceptual quality of generated adversarial examples.
 
-This compact repository intentionally uses the terminology from the paper.
-Internal experiment numbers, historical method names, absolute server paths,
-evaluation caches, and development-only branches are not included.
+The method follows a continuous latent-space trajectory. It first constructs a
+transferable attack state from complementary detector feedback and then
+continues from the same state to improve visual quality while retaining the
+established attack behavior.
 
-## Repository layout
+## Highlights
+
+- Complementary detector feedback at the output, transformed-view, and feature
+  levels.
+- A unified attack direction with object-aware spatial emphasis.
+- Continuous quality optimization from the constructed attack state without a
+  second inversion.
+- Coordinated perceptual and structural updates with attack-retention checks.
+- Evaluation across conventional and cross-paradigm object detectors.
+
+## Method outline
+
+CFQ-Attack contains two consecutive components:
+
+1. **Attack-state construction.** Complementary feedback from the surrogate
+   detector is combined to update the diffusion latent and form a transferable
+   attack state.
+2. **Attack-preserving quality optimization.** Perceptual and structural
+   feedback refines the same latent trajectory, while candidate validation
+   prevents destructive updates that substantially weaken the attack.
+
+The repository organizes these components through model-independent interfaces,
+allowing detector and diffusion backends to be connected without changing the
+high-level pipeline.
+
+## Experiments
+
+The accompanying paper evaluates CFQ-Attack on MS COCO and PASCAL VOC. The
+evaluation covers standard two-stage, one-stage, point-based, and transformer
+detectors, together with cross-paradigm and open-vocabulary targets. Additional
+experiments study surrogate generalization, input preprocessing, image quality,
+and component ablations.
+
+Please refer to the paper for quantitative results and experimental settings.
+
+## Repository structure
 
 ```text
 cfq_attack/
-  cli.py             COCO-style image generation entry point
-  config.py          paper-aligned configuration dataclasses
-  interfaces.py      diffusion/detector/quality backend contracts
-  masks.py           object-aware spatial support maps
-  optimization.py    gradient normalization and conflict projection
-  pipeline.py        two-stage CFQ-Attack optimization loop
+  interfaces.py      model-independent backend interfaces
+  masks.py           object-aware support hook
+  optimization.py    attack and quality coordination hooks
+  pipeline.py        two-component CFQ-Attack workflow
 configs/
-  cfq_attack.yaml    settings reported in the paper
+  cfq_attack.yaml    method structure
 examples/
-  backend_template.py  template for model-specific adapters
-scripts/
-  generate_coco.sh   portable launch example
+  backend_template.py
 tests/
-  test_core.py       lightweight mathematical checks
+  test_core.py
 ```
 
-## Installation
+## Backend integration
 
-Create a Python 3.10 environment with a CUDA-enabled PyTorch installation,
-then install the compact package:
+Detector and diffusion implementations are connected through the interfaces in
+`cfq_attack/interfaces.py`. The template in `examples/backend_template.py`
+illustrates the expected adapter structure. Pretrained checkpoints, datasets,
+and third-party model repositories are obtained separately from their original
+providers and are not redistributed here.
 
-```bash
-pip install -e .
-```
+## Citation
 
-The detector and diffusion adapters additionally require the versions of
-MMDetection and Stable Diffusion used by the host environment. Model weights
-and datasets are not redistributed.
+If this project is useful for your research, please cite the corresponding
+CFQ-Attack paper. BibTeX information will be added with the publication record.
 
-## Data format
+## Responsible use
 
-The generation entry point accepts COCO-style annotations. Each selected image
-must have at least one valid bounding box. Images are resized to 512 x 512 and
-boxes are scaled consistently before optimization. Generated files use:
+This project is intended for academic research on adversarial robustness and
+defensive evaluation. Users should evaluate only systems and data for which
+they have authorization.
 
-```text
-<12-digit-image-id>_adv_image.png
-```
-
-## Generation
-
-Model-specific initialization is isolated behind a backend factory. Copy
-`examples/backend_template.py`, connect it to local Stable Diffusion 2.1 and
-MMDetection installations, and provide the resulting factory on the command
-line:
-
-```bash
-python -m cfq_attack.cli \
-  --config configs/cfq_attack.yaml \
-  --backend my_backend:create_backend \
-  --annotations /path/to/instances.json \
-  --image-root /path/to/images \
-  --output outputs/cfq_attack \
-  --device cuda:0
-```
-
-For an ordered subset, additionally pass a JSON list using
-`--image-id-manifest`. Resume-safe execution skips only complete output PNGs.
-
-## Method configuration
-
-The default configuration mirrors the paper:
-
-- 30 attack-state iterations with AdamW learning rate 0.01;
-- 40 quality iterations with AdamW learning rate 0.0025;
-- Stable Diffusion 2.1-base, 30 DDIM steps, inversion step 25, CFG 3;
-- feature feedback on zero-based iterations 1, 3, ..., 29;
-- attack-retention threshold 0.98 with at most three backtracking retries;
-- 512 x 512 LPIPS/MS-SSIM quality objectives.
-
-## Release scope
-
-This submission snapshot contains the paper-facing optimization structure and
-portable interfaces. Large checkpoints, datasets, generated samples, target
-model evaluators, internal audit logs, and historical ablation implementations
-are excluded. See [METHOD_MAP.md](METHOD_MAP.md) for the paper-to-code mapping
-and [RELEASE_SCOPE.md](RELEASE_SCOPE.md) for the intentional release boundary.

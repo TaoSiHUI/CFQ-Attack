@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cfq-attack"
+version = "0.1.0"
+description = "Reference framework for CFQ-Attack"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6.0"]
+
+[project.scripts]
+cfq-info = "cfq_attack.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["cfq_attack*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
